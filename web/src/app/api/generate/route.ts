@@ -9,10 +9,10 @@ const anthropic = new Anthropic({
 
 export async function POST(req: Request) {
   try {
-    const { context, feedback } = await req.json() as { 
-      context: BusinessContext, 
-      feedback?: string 
-    };
+    const body = await req.json();
+    console.log('API received:', body);
+
+    const { context, feedback } = body;
 
     const prompt = `Generate compelling strategy statements based on the business context provided.
     Guidelines:
@@ -42,8 +42,12 @@ export async function POST(req: Request) {
     });
 
     const content = response.content[0].text;
+    console.log('Claude response:', content);
+
     const thoughts = extractXML(content, 'thoughts');
     const statements = extractXML(content, 'statements');
+    
+    console.log('Extracted XML:', { thoughts, statements });
     
     const result: GenerationResponse = {
       thoughts,
@@ -54,9 +58,11 @@ export async function POST(req: Request) {
       }
     };
 
+    console.log('Sending response:', result);
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Generation error:', error);
-    return NextResponse.json({ error: 'Generation failed' }, { status: 500 });
+    console.error('API error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    return NextResponse.json({ error: 'Generation failed', details: errorMessage }, { status: 500 });
   }
 }
