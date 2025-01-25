@@ -3,16 +3,35 @@ import { NextResponse } from 'next/server';
 import { extractXML, buildPrompt } from '../../../lib/utils';
 import { BusinessContext, GenerationResponse } from '../../../lib/types';
 
+export const runtime = 'edge'; // Add edge runtime
+export const maxDuration = 300; // 5 minute timeout
+
+// Debug the API key early
+const apiKey = process.env.ANTHROPIC_API_KEY;
+if (!apiKey) {
+  console.error('API key not found in environment');
+}
+
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+  apiKey,
+  maxRetries: 3,
+  timeout: 180_000 // 3 minute timeout
 });
 
 export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    console.log('API received:', body);
+  console.log('API route started');
+  
+  if (!apiKey) {
+    console.error('No API key available');
+    return NextResponse.json(
+      { error: 'API configuration error - No API key' },
+      { status: 500 }
+    );
+  }
 
-    const { context, feedback } = body;
+  try {
+    const { context, feedback } = await req.json();
+    console.log('Processing request for:', context?.industry);
 
     const prompt = `Generate compelling strategy statements based on the business context provided.
     Guidelines:
@@ -38,8 +57,11 @@ export async function POST(req: Request) {
       messages: [{
         role: 'user',
         content: buildPrompt(prompt, context, feedback)
-      }]
-    });
+      }],
+      temperature: 0.7
+    }).withResponse(); // Get full response object for debugging
+
+    console.log('Anthropic response status:', response.status);
 
     const content = response.content[0].text;
     console.log('Claude response:', content);
@@ -61,8 +83,19 @@ export async function POST(req: Request) {
     console.log('Sending response:', result);
     return NextResponse.json(result);
   } catch (error) {
-    console.error('API error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    return NextResponse.json({ error: 'Generation failed', details: errorMessage }, { status: 500 });
+    console.error('Detailed API error:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      cause: error.cause
+    });
+    
+    return NextResponse.json({ 
+      error: 'Generation failed', 
+      details: error.message,
+      name: error.name
+    }, { 
+      status: error.status || 500 
+    });
   }
 }

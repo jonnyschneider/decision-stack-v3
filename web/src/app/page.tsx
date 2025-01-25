@@ -20,11 +20,23 @@ export default function Home() {
     console.log('Submitting context:', context);
     
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout
+
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ context })
+        body: JSON.stringify({ context }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`API error: ${error.details || response.statusText}`);
+      }
+
       const data = await response.json();
       console.log('API Response:', data);
       
@@ -36,7 +48,13 @@ export default function Home() {
       setStrategy(data.statements);
       console.log('Set strategy state:', data.statements);
     } catch (error) {
-      console.error('Error in handleSubmit:', error);
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        cause: error.cause
+      });
+      // Show error to user
+      alert(`Error generating strategy: ${error.message}`);
     } finally {
       setLoading(false);
     }
