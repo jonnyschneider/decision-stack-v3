@@ -86,20 +86,21 @@ export async function POST(req: Request) {
 
     console.log('Sending response:', result);
     return NextResponse.json(result);
-  } catch (error) {
+  } catch (err: unknown) {
+    const error = err as Error;
     console.error('Detailed API error:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-      cause: error.cause
+      name: error?.name || 'UnknownError',
+      message: error?.message || 'An unknown error occurred',
+      stack: error?.stack,
+      cause: error instanceof Error ? error.cause : undefined
     });
     
     return NextResponse.json({ 
       error: 'Generation failed', 
-      details: error.message,
-      name: error.name
+      details: error?.message || 'An unknown error occurred',
+      name: error?.name || 'UnknownError'
     }, { 
-      status: error.status || 500 
+      status: 500 
     });
   }
 }
