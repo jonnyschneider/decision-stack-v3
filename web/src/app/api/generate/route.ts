@@ -59,12 +59,16 @@ export async function POST(req: Request) {
         content: buildPrompt(prompt, context, feedback)
       }],
       temperature: 0.7
-    }).withResponse(); // Get full response object for debugging
+    });
 
-    console.log('Anthropic response status:', response.status);
+    console.log('Anthropic response received');
+
+    if (!response.content[0]?.text) {
+      throw new Error('Invalid response format from Claude');
+    }
 
     const content = response.content[0].text;
-    console.log('Claude response:', content);
+    console.log('Claude response length:', content.length);
 
     const thoughts = extractXML(content, 'thoughts');
     const statements = extractXML(content, 'statements');
