@@ -47,14 +47,15 @@ export default function Home() {
       
       setStrategy(data.statements);
       console.log('Set strategy state:', data.statements);
-    } catch (error) {
+    } catch (err: unknown) {
+      const error = err as Error;
       console.error('Error details:', {
-        name: error.name,
-        message: error.message,
-        cause: error.cause
+        name: error?.name || 'UnknownError',
+        message: error?.message || 'An unknown error occurred',
+        cause: error instanceof Error ? error.cause : undefined
       });
-      // Show error to user
-      alert(`Error generating strategy: ${error.message}`);
+      
+      alert(`Error generating strategy: ${error?.message || 'An unknown error occurred'}`);
     } finally {
       setLoading(false);
     }
